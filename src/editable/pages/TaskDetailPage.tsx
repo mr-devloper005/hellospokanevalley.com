@@ -1,9 +1,10 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ArrowUpRight, Bookmark, Building2, Camera, CheckCircle2, Download, ExternalLink, FileText, Globe2, Mail, MapPin, Phone, Star, Tag, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Camera, CheckCircle2, Download, ExternalLink, FileText, Globe2, Mail, MapPin, Phone, Star, Tag, UserRound } from 'lucide-react'
 import { buildPostMetadata, buildTaskMetadata } from '@/lib/seo'
 import { fetchArticleComments, fetchTaskPostBySlug, fetchTaskPosts } from '@/lib/task-data'
 import { getTaskConfig, SITE_CONFIG, type TaskKey } from '@/lib/site-config'
+import { Ads, getSlotSizes } from '@/lib/ads'
 import type { SitePost } from '@/lib/site-connector'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
 import { EditableArticleComments } from '@/editable/components/EditableArticleComments'
@@ -62,6 +63,10 @@ const escapeHtml = (value: string) => value
   .replace(/'/g, '&#39;')
 
 const safeUrl = (value: string) => /^https?:\/\//i.test(value) ? value : '#'
+const pickRandom = (sizes: string[]) => sizes[Math.floor(Math.random() * sizes.length)]
+const displayTaskLabel = (task: TaskKey, fallback: string) => task === 'listing' ? 'Places' : task === 'sbm' ? 'Reads' : fallback
+const cleanDomain = (value: string) => value.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
+const domainInitial = (value: string) => (cleanDomain(value).charAt(0) || 'R').toUpperCase()
 
 const linkifyMarkdown = (value: string) => value
   .replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+)\)/gi, (_match, label, url) => `<a href="${safeUrl(url)}" target="_blank" rel="nofollow noopener noreferrer">${label}</a>`)
@@ -184,7 +189,7 @@ function BackLink({ task }: { task: TaskKey }) {
   const taskConfig = getTaskConfig(task)
   return (
     <Link href={taskConfig?.route || '/'} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--tk-muted)] transition hover:text-[var(--tk-text)]">
-      <ArrowLeft className="h-4 w-4" /> Back to {taskConfig?.label || 'posts'}
+      <ArrowLeft className="h-4 w-4" /> Back to {displayTaskLabel(task, taskConfig?.label || 'posts')}
     </Link>
   )
 }
@@ -213,40 +218,68 @@ function ArticleDetail({ post, related, comments }: { post: SitePost; related: S
 // ----- Listing: a precise directory record -----
 function ListingDetail({ post, related }: { post: SitePost; related: SitePost[] }) {
   const images = getImages(post)
-  const logo = images[0]
+  const hero = images[0] || '/placeholder.svg?height=900&width=1400'
   const address = getField(post, ['address', 'location', 'city'])
   const phone = getField(post, ['phone', 'telephone', 'mobile'])
   const email = getField(post, ['email'])
   const website = getField(post, ['website', 'url'])
+  const hours = getField(post, ['hours', 'openingHours', 'schedule'])
   const mapSrc = mapSrcFor(post)
+  const tags = post.tags || []
+  const category = categoryOf(post, 'Place')
   return (
-    <section className="mx-auto max-w-[var(--editable-container)] px-6 py-14 sm:py-20 lg:px-8">
-      <BackLink task="listing" />
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <article className="min-w-0">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-raised)]">
-              {logo ? <img src={logo} alt="" className="h-full w-full object-cover" /> : <Building2 className="h-12 w-12 text-[var(--tk-muted)]" />}
+    <>
+      <section className="mx-auto max-w-[var(--editable-container)] px-6 py-14 sm:py-20 lg:px-8">
+        <BackLink task="listing" />
+        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_390px]">
+          <article className="min-w-0">
+            <Kicker task="listing">Places</Kicker>
+            <h1 className="editable-accent mt-5 text-balance text-5xl font-normal leading-[0.98] tracking-normal text-[var(--tk-text)] sm:text-6xl lg:text-7xl">{post.title}</h1>
+            {leadText(post) ? <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--tk-muted)]">{leadText(post)}</p> : null}
+            <div className="mt-8 overflow-hidden rounded-[30px] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-3">
+              <div className="relative aspect-[16/10] overflow-hidden rounded-[24px] bg-[var(--tk-raised)]">
+                <img src={hero} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(10,10,10,0.72))]" />
+                <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-center gap-2">
+                  <span className="rounded-[6px] border border-white/15 bg-black/55 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white backdrop-blur">{category}</span>
+                  <span className="rounded-[6px] border border-[var(--tk-accent)]/45 bg-[var(--tk-accent-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">Verified context</span>
+                </div>
+              </div>
             </div>
-            <div className="min-w-0">
-              <Kicker task="listing">Business listing</Kicker>
-              <h1 className="editable-display mt-4 text-4xl font-semibold leading-[1.04] tracking-[-0.03em] sm:text-5xl">{post.title}</h1>
-              <DetailMeta post={post} category={getField(post, ['category'])} />
+            <InfoGrid items={[["Location", address, MapPin], ["Phone", phone, Phone], ["Hours", hours || 'Check before visiting', CheckCircle2], ["Verified", 'Community indexed', CheckCircle2]]} />
+            <Divider />
+            <section>
+              <h2 className="editable-accent text-4xl font-normal italic leading-tight text-white sm:text-5xl">What to know</h2>
+              <BodyContent post={post} />
+              {tags.length ? <div className="mt-8 flex flex-wrap gap-2">{tags.map((tag) => <span key={tag} className="rounded-[6px] border border-[var(--tk-line)] bg-white/[0.04] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--tk-muted)]">{tag}</span>)}</div> : null}
+            </section>
+            <ImageStrip images={images.slice(1)} label="Gallery" />
+            {mapSrc ? <div className="mt-10"><MapBox src={mapSrc} label={address || post.title} /></div> : null}
+          </article>
+          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-[24px] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--tk-accent)]">Contact card</p>
+              <div className="mt-5 grid gap-3">
+                {address ? <a href={mapSrc || '#'} className="flex items-start gap-3 rounded-[12px] border border-[var(--tk-line)] bg-white/[0.03] p-4 text-sm leading-6 text-[var(--tk-muted)]"><MapPin className="mt-1 h-4 w-4 shrink-0 text-[var(--tk-accent)]" /> {address}</a> : null}
+                {phone ? <a href={`tel:${phone}`} className="flex items-center gap-3 rounded-[12px] border border-[var(--tk-line)] bg-white/[0.03] p-4 text-sm text-[var(--tk-muted)]"><Phone className="h-4 w-4 text-[var(--tk-accent)]" /> {phone}</a> : null}
+                {email ? <a href={`mailto:${email}`} className="flex items-center gap-3 rounded-[12px] border border-[var(--tk-line)] bg-white/[0.03] p-4 text-sm text-[var(--tk-muted)]"><Mail className="h-4 w-4 text-[var(--tk-accent)]" /> {email}</a> : null}
+                {website ? <Link href={website} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-[12px] border border-[var(--tk-line)] bg-white/[0.03] p-4 text-sm text-[var(--tk-muted)]"><Globe2 className="h-4 w-4 text-[var(--tk-accent)]" /> {cleanDomain(website)}</Link> : null}
+                {hours ? <div className="flex items-center gap-3 rounded-[12px] border border-[var(--tk-line)] bg-white/[0.03] p-4 text-sm text-[var(--tk-muted)]"><CheckCircle2 className="h-4 w-4 text-[var(--tk-accent)]" /> {hours}</div> : null}
+              </div>
+              {website ? <Link href={website} target="_blank" rel="noreferrer" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[4px] bg-[var(--tk-accent)] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-white transition hover:brightness-110">Visit website <ExternalLink className="h-4 w-4" /></Link> : null}
             </div>
-          </div>
-          {leadText(post) ? <p className="mt-7 max-w-2xl text-lg leading-8 text-[var(--tk-muted)]">{leadText(post)}</p> : null}
-          <InfoGrid items={[['Location', address, MapPin], ['Phone', phone, Phone], ['Email', email, Mail], ['Website', website, Globe2]]} />
-          <Divider />
-          <BodyContent post={post} />
-          <ImageStrip images={images.slice(1)} label="Showcase" />
-        </article>
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {mapSrc ? <MapBox src={mapSrc} label={address || post.title} /> : null}
-          <ContactAction website={website} phone={phone} email={email} />
-          <RelatedPanel task="listing" post={post} related={related} />
-        </aside>
-      </div>
-    </section>
+            <Ads slot="sidebar" size={pickRandom(getSlotSizes('sidebar'))} showLabel />
+            <div className="rounded-[24px] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--tk-accent)]">Trust signals</p>
+              <div className="mt-4 grid gap-3 text-sm text-[var(--tk-muted)]">
+                {['Contact details reviewed', 'Directory record indexed', 'Community-safe listing'].map((item) => <p key={item} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--tk-accent)]" /> {item}</p>)}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+      <RelatedStrip task="listing" related={related} />
+    </>
   )
 }
 
@@ -322,21 +355,57 @@ function ImageDetail({ post, related }: { post: SitePost; related: SitePost[] })
 // ----- Bookmark: a single curated resource -----
 function BookmarkDetail({ post, related }: { post: SitePost; related: SitePost[] }) {
   const website = getField(post, ['website', 'url', 'link'])
+  const domain = website ? cleanDomain(website) : 'source'
+  const category = categoryOf(post, 'Read')
+  const tags = post.tags || []
+  const saved = getField(post, ['createdAt', 'date', 'publishedAt']) || 'Recently saved'
   return (
     <>
-      <article className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
+      <section className="mx-auto max-w-[var(--editable-container)] px-6 py-14 sm:py-20 lg:px-8">
         <BackLink task="sbm" />
-        <div className="mt-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]"><Bookmark className="h-7 w-7" /></div>
-        <div className="mt-6"><Kicker task="sbm">Saved resource</Kicker></div>
-        <h1 className="editable-display mt-4 text-4xl font-semibold leading-[1.05] tracking-[-0.03em] sm:text-5xl">{post.title}</h1>
-        {leadText(post) ? <p className="mt-6 text-lg leading-8 text-[var(--tk-muted)]">{leadText(post)}</p> : null}
-        {website ? (
-          <Link href={website} target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--tk-accent)] px-5 py-3 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:opacity-90">
-            Open resource <ExternalLink className="h-4 w-4" />
-          </Link>
-        ) : null}
-        <BodyContent post={post} />
-      </article>
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <article className="min-w-0">
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-[6px] border border-[var(--tk-accent)]/45 bg-[var(--tk-accent-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">Curated link</span>
+              <span className="rounded-[6px] border border-[var(--tk-line)] bg-white/[0.04] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--tk-muted)]">{domain}</span>
+              <span className="rounded-[6px] border border-[var(--tk-line)] bg-white/[0.04] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--tk-muted)]">{category}</span>
+            </div>
+            <h1 className="mt-7 text-balance text-6xl font-bold leading-[0.94] tracking-normal text-white sm:text-7xl lg:text-[7.8rem]">{post.title}</h1>
+            {leadText(post) ? <blockquote className="editable-accent mt-8 border-l-2 border-[var(--tk-accent)] pl-6 text-3xl italic leading-tight text-white/88 sm:text-4xl">{leadText(post)}</blockquote> : null}
+            <div className="mt-8 flex flex-wrap gap-3">
+              {website ? <Link href={website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-[4px] bg-[var(--tk-accent)] px-6 py-3 text-xs font-bold uppercase tracking-[0.14em] text-white">Open resource <ExternalLink className="h-4 w-4" /></Link> : null}
+              <BackLink task="sbm" />
+            </div>
+            <InfoGrid items={[["Source", domain, Globe2], ["Category", category, Tag], ["Saved", saved, CheckCircle2], ["Curated", SITE_CONFIG.name, CheckCircle2]]} />
+            <div className="mt-12 grid gap-8 lg:grid-cols-[0.38fr_0.62fr]">
+              <h2 className="editable-accent text-4xl font-normal italic leading-tight text-white sm:text-5xl">Why it belongs here</h2>
+              <div>
+                <BodyContent post={post} />
+                {tags.length ? <div className="mt-8 flex flex-wrap gap-2">{tags.map((tag) => <span key={tag} className="rounded-[6px] border border-[var(--tk-line)] bg-white/[0.04] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--tk-muted)]">{tag}</span>)}</div> : null}
+                {website ? <div className="mt-10 rounded-[24px] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6"><p className="text-lg font-bold text-white">Ready to inspect the source?</p><p className="mt-2 text-sm leading-6 text-[var(--tk-muted)]">Open the original resource when you want the full context.</p><Link href={website} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-[4px] bg-[var(--tk-accent)] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-white">Visit source <ExternalLink className="h-4 w-4" /></Link></div> : null}
+                <div className="mt-10"><Ads slot="article-bottom" size={pickRandom(getSlotSizes('article-bottom'))} showLabel /></div>
+              </div>
+            </div>
+          </article>
+          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-[24px] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6 text-center">
+              <div className="editable-accent mx-auto grid h-28 w-28 place-items-center rounded-[18px] border border-[var(--tk-line)] bg-white/[0.04] text-7xl italic text-[var(--tk-accent)]">{domainInitial(domain)}</div>
+              <p className="mt-4 truncate text-lg font-bold text-white">{domain}</p>
+              <div className="mt-5 grid gap-3 text-left text-sm text-[var(--tk-muted)]">
+                <BadgeLine label="Category" value={category} />
+                <BadgeLine label="Tags" value={String(tags.length)} />
+                <BadgeLine label="Curated by" value={SITE_CONFIG.name} />
+                <BadgeLine label="Saved" value={saved} />
+              </div>
+              {website ? <Link href={website} target="_blank" rel="noreferrer" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[4px] bg-[var(--tk-accent)] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-white">Visit source <ExternalLink className="h-4 w-4" /></Link> : null}
+            </div>
+            <div className="rounded-[24px] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--tk-accent)]">Why this list</p>
+              <p className="mt-3 text-sm leading-7 text-[var(--tk-muted)]">Reads are kept for their source value, practical context, and usefulness beyond a single visit.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
       <RelatedStrip task="sbm" related={related} />
     </>
   )
@@ -494,14 +563,14 @@ function BadgeLine({ label, value }: { label: string; value: string }) {
   )
 }
 
-function RelatedPanel({ task, post, related }: { task: TaskKey; post: SitePost; related: SitePost[] }) {
+function RelatedPanel({ task, related }: { task: TaskKey; post: SitePost; related: SitePost[] }) {
   const taskConfig = getTaskConfig(task)
   return (
     <div className="space-y-6">
       <div className="rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--tk-muted)]">About this post</p>
         <div className="mt-4 grid gap-2.5 text-sm text-[var(--tk-muted)]">
-          <p className="inline-flex items-center gap-2"><Tag className="h-4 w-4 text-[var(--tk-accent)]" /> {taskConfig?.label || task}</p>
+          <p className="inline-flex items-center gap-2"><Tag className="h-4 w-4 text-[var(--tk-accent)]" /> {displayTaskLabel(task, taskConfig?.label || task)}</p>
           <p className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--tk-accent)]" /> {SITE_CONFIG.name}</p>
         </div>
       </div>
@@ -527,7 +596,7 @@ function RelatedStrip({ task, related }: { task: TaskKey; related: SitePost[] })
     <section className="border-t border-[var(--tk-line)]">
       <div className="mx-auto max-w-[var(--editable-container)] px-6 py-14 sm:py-16 lg:px-8">
         <div className="flex items-center justify-between">
-          <h2 className="editable-display text-2xl font-semibold tracking-[-0.02em]">More {(taskConfig?.label || 'posts').toLowerCase()}</h2>
+          <h2 className="editable-display text-2xl font-semibold tracking-[-0.02em]">More {displayTaskLabel(task, taskConfig?.label || 'posts').toLowerCase()}</h2>
           <Link href={taskConfig?.route || '/'} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--tk-accent)]">View all <ArrowUpRight className="h-4 w-4" /></Link>
         </div>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -540,7 +609,7 @@ function RelatedStrip({ task, related }: { task: TaskKey; related: SitePost[] })
 
 function RelatedCard({ task, post, grid = false }: { task: TaskKey; post: SitePost; grid?: boolean }) {
   const image = getImages(post)[0]
-  // Build the detail URL from the task route (e.g. /listing/<slug>) — the same
+  // Build the detail URL from the task route (e.g. /listing/<slug>) â€” the same
   // base the archive cards use. buildPostUrl() can fall back to /posts when the
   // task isn't in the enabled taskViews map, which 404s.
   const href = `${getTaskConfig(task)?.route || `/${task}`}/${post.slug}`
@@ -548,7 +617,7 @@ function RelatedCard({ task, post, grid = false }: { task: TaskKey; post: SitePo
     return (
       <Link href={href} className="group block overflow-hidden rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] transition duration-300 hover:-translate-y-1">
         <div className="aspect-[16/10] overflow-hidden bg-[var(--tk-raised)]">
-          {image ? <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" /> : <div className="flex h-full items-center justify-center"><FileText className="h-7 w-7 text-[var(--tk-muted)]" /></div>}
+          {image && task !== 'sbm' ? <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" /> : <div className="flex h-full items-center justify-center"><span className="editable-accent text-6xl italic text-[var(--tk-accent)]">{domainInitial(getField(post, ['website', 'url', 'link']) || post.title)}</span></div>}
         </div>
         <div className="p-5">
           <h3 className="editable-display line-clamp-2 text-base font-semibold leading-snug tracking-[-0.01em]">{post.title}</h3>
@@ -567,4 +636,7 @@ function RelatedCard({ task, post, grid = false }: { task: TaskKey; post: SitePo
     </Link>
   )
 }
+
+
+
 

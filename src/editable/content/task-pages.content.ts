@@ -1,4 +1,4 @@
-import type { TaskKey } from '@/lib/site-config'
+﻿import type { TaskKey } from '@/lib/site-config'
 
 export type TaskPageVoice = {
   eyebrow: string
@@ -27,12 +27,12 @@ export const taskPageVoices = {
     chips: ['Fast scan', 'Offers', 'Action cues'],
   },
   sbm: {
-    eyebrow: 'Saved resources',
-    headline: 'Social bookmarks arranged like curated collections.',
-    description: 'Bookmark pages should feel like shelves of useful resources, tools, references, and collections.',
+    eyebrow: 'Reads',
+    headline: 'Curated reads arranged for quick judgment.',
+    description: 'Reads pages should feel like a clear shelf of useful links, references, and context worth opening.',
     filterLabel: 'Filter collection',
-    secondaryNote: 'Curated resources need grouping and calm metadata.',
-    chips: ['Collections', 'Resources', 'Reference flow'],
+    secondaryNote: 'Useful links need grouping, source context, and calm metadata.',
+    chips: ['Curated links', 'Source context', 'Reference flow'],
   },
   profile: {
     eyebrow: 'People and profiles',
@@ -51,12 +51,12 @@ export const taskPageVoices = {
     chips: ['Documents', 'Guides', 'Archive ready'],
   },
   listing: {
-    eyebrow: 'Business directory',
-    headline: 'Business listings built for discovery and comparison.',
-    description: 'Listing pages should behave like a directory with trust cues, metadata, and a practical search rhythm.',
-    filterLabel: 'Filter business category',
+    eyebrow: 'Places',
+    headline: 'Local places built for discovery and comparison.',
+    description: 'Places pages should behave like a premium directory with trust cues, metadata, and a practical search rhythm.',
+    filterLabel: 'Filter place category',
     secondaryNote: 'Prioritize comparison, location, and direct action paths.',
-    chips: ['Directory', 'Compare', 'Business discovery'],
+    chips: ['Directory', 'Compare', 'Local discovery'],
   },
   image: {
     eyebrow: 'Visual gallery',
@@ -67,3 +67,4 @@ export const taskPageVoices = {
     chips: ['Gallery', 'Visual-first', 'Portfolio mood'],
   },
 } satisfies Record<TaskKey, TaskPageVoice>
+
