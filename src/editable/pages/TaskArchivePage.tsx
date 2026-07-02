@@ -1,9 +1,10 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { ArrowUpRight, BriefcaseBusiness, ChevronDown, Download, FileText, Globe, MapPin, Phone, Search, Star, UserRound } from 'lucide-react'
 import { buildTaskMetadata } from '@/lib/seo'
 import { CATEGORY_OPTIONS, normalizeCategory } from '@/lib/categories'
 import { fetchPaginatedTaskPosts, buildPostUrl } from '@/lib/task-data'
 import { getTaskConfig, type TaskKey } from '@/lib/site-config'
+import { Ads, getSlotSizes } from '@/lib/ads'
 import type { SiteFeedPagination, SitePost } from '@/lib/site-connector'
 import { taskPageMetadata } from '@/config/site.content'
 import { taskPageVoices } from '@/editable/content/task-pages.content'
@@ -46,6 +47,8 @@ const getField = (post: SitePost, keys: string[]) => {
   return ''
 }
 const cleanDomain = (value: string) => value.replace(/^https?:\/\//, '').replace(/\/$/, '')
+const pickRandom = (sizes: string[]) => sizes[Math.floor(Math.random() * sizes.length)]
+const displayTaskLabel = (task: TaskKey, fallback: string) => task === 'listing' ? 'Places' : task === 'sbm' ? 'Reads' : fallback
 
 function pageHref(basePath: string, category: string, page: number) {
   const params = new URLSearchParams()
@@ -90,59 +93,91 @@ export function TaskArchiveView({ task, posts, pagination, category, basePath }:
   const voice = taskPageVoices[task]
   const theme = getTaskTheme(task)
   const page = pagination.page || 1
-  const label = taskConfig?.label || task
+  const label = displayTaskLabel(task, taskConfig?.label || task)
   const categoryLabel = category === 'all' ? 'All categories' : CATEGORY_OPTIONS.find((item) => item.slug === category)?.name || category
 
   return (
     <EditableSiteShell>
       <main style={taskThemeStyle(task)} className="min-h-screen bg-[var(--tk-bg)] text-[var(--tk-text)]">
-        <header className="relative overflow-hidden border-b border-[var(--tk-line)]">
-          <div className="pointer-events-none absolute inset-x-0 -top-40 h-96 bg-[radial-gradient(60%_60%_at_50%_0%,var(--tk-glow),transparent_70%)]" />
-          <div className="relative mx-auto max-w-[var(--editable-container)] px-6 py-20 sm:py-28 lg:px-8">
-            <div className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.34em] text-[var(--tk-accent)]">
-              <span>{theme.kicker}</span>
-              <span className="h-1 w-1 rounded-full bg-[var(--tk-accent)] opacity-50" />
-              <span className="text-[var(--tk-muted)]">{label}</span>
+        <header className="relative">
+          <div className="relative mx-auto max-w-[var(--editable-container)] px-6 pt-32 pb-14 sm:pt-40 lg:px-8 lg:pt-44">
+            <div className="mx-auto max-w-4xl text-center">
+              <span className="inline-flex rounded-full border border-[var(--tk-line)] bg-[var(--tk-raised)] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--tk-text)]">
+                {theme.kicker} &mdash; {label}
+              </span>
+              <h1 className="editable-display mt-8 text-5xl font-normal leading-[1.02] tracking-[-0.02em] sm:text-7xl lg:text-[6.4rem]">
+                {(voice?.headline || `Browse ${label}`).split(' ').slice(0, -1).join(' ')}{' '}
+                <span className="editable-accent italic">
+                  <span className="editable-highlight">
+                    {(voice?.headline || `Browse ${label}`).split(' ').slice(-1)}
+                  </span>
+                </span>
+              </h1>
+              <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-[var(--tk-muted)]">
+                {voice?.description || theme.note}
+              </p>
+              {voice?.chips?.length ? (
+                <div className="mt-8 flex flex-wrap justify-center gap-2.5">
+                  {voice.chips.map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-full border border-[var(--tk-line)] bg-[var(--tk-raised)] px-3.5 py-1.5 text-xs font-medium text-[var(--tk-muted)]"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <h1 className="editable-display mt-6 max-w-3xl text-balance text-[2.5rem] font-semibold leading-[1.06] tracking-[-0.03em] sm:text-5xl lg:text-6xl">
-              {voice?.headline || `Browse ${label}`}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--tk-muted)]">{voice?.description || theme.note}</p>
-            {voice?.chips?.length ? (
-              <div className="mt-8 flex flex-wrap gap-2.5">
-                {voice.chips.map((chip) => (
-                  <span key={chip} className="rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--tk-muted)]">{chip}</span>
-                ))}
-              </div>
-            ) : null}
 
-            <div className="mt-12 flex flex-col gap-4 border-t border-[var(--tk-line)] pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mx-auto mt-14 flex max-w-4xl flex-col gap-4 border-t border-[var(--tk-line)] pt-6 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-[var(--tk-muted)]">
-                <span className="font-semibold text-[var(--tk-text)]">{posts.length}</span> {posts.length === 1 ? 'post' : 'posts'} · {categoryLabel}
+                <span className="font-semibold text-[var(--tk-text)]">{posts.length}</span>{' '}
+                {posts.length === 1 ? 'post' : 'posts'} &middot; {categoryLabel}
               </p>
               <form action={basePath} className="flex items-center gap-2.5">
                 <div className="relative">
                   <select
                     name="category"
                     defaultValue={category}
-                    className="h-11 appearance-none rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] pl-4 pr-10 text-sm font-medium text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
+                    className="h-11 appearance-none rounded-full border border-[var(--tk-line)] bg-[var(--tk-raised)] pl-4 pr-10 text-sm font-medium text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
                     aria-label={voice?.filterLabel || 'Filter category'}
                   >
                     <option value="all">All categories</option>
-                    {CATEGORY_OPTIONS.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+                    {CATEGORY_OPTIONS.map((item) => (
+                      <option key={item.slug} value={item.slug}>
+                        {item.name}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tk-muted)]" />
                 </div>
-                <button className="inline-flex h-11 items-center rounded-full bg-[var(--tk-accent)] px-5 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:opacity-90">Apply</button>
+                <button className="inline-flex h-11 items-center rounded-full bg-[var(--tk-accent)] px-5 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:opacity-90">
+                  Apply
+                </button>
               </form>
             </div>
           </div>
         </header>
 
         <section className="mx-auto max-w-[var(--editable-container)] px-6 py-16 sm:py-20 lg:px-8">
+          {task === 'sbm' ? (
+            <div className="mb-8">
+              <Ads slot="header" size={pickRandom(getSlotSizes('header'))} showLabel />
+            </div>
+          ) : null}
           {posts.length ? (
             <div className={taskGrid[task]}>
-              {posts.map((post, index) => <ArchivePostCard key={post.id || post.slug} post={post} task={task} basePath={basePath} index={index} />)}
+              {posts.map((post, index) => (
+                <div key={post.id || post.slug} className="contents">
+                  {task === 'listing' && index === 6 ? (
+                    <div className="xl:col-span-2">
+                      <Ads slot="in-feed" size={pickRandom(getSlotSizes('in-feed'))} showLabel />
+                    </div>
+                  ) : null}
+                  <ArchivePostCard post={post} task={task} basePath={basePath} index={index} />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="mx-auto max-w-xl rounded-[var(--tk-radius)] border border-dashed border-[var(--tk-line)] bg-[var(--tk-surface)] px-8 py-16 text-center">
@@ -185,7 +220,7 @@ function CardArrow({ label }: { label: string }) {
   )
 }
 
-// Yelp-style red star ratings. Prefers real rating/review fields, falls back to
+// Reference-style ratings. Prefers real rating/review fields, falls back to
 // a stable derived value so the UI always reads well (wire to real data later).
 const hashStr = (value: string) => {
   let h = 0
@@ -230,7 +265,7 @@ function ArticleArchiveCard({ post, href, index }: { post: SitePost; href: strin
       <div className="p-6 sm:p-7">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--tk-accent)]">
           <span>{category}</span>
-          <span className="text-[var(--tk-muted)]">· No. {String(index + 1).padStart(2, '0')}</span>
+          <span className="text-[var(--tk-muted)]">Â· No. {String(index + 1).padStart(2, '0')}</span>
         </div>
         <h2 className="editable-display mt-3 text-2xl font-semibold leading-snug tracking-[-0.02em]">{post.title}</h2>
         <RatingLine post={post} />
@@ -311,7 +346,7 @@ function BookmarkArchiveCard({ post, href, index }: { post: SitePost; href: stri
         <Globe className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--tk-muted)]">Saved · {String(index + 1).padStart(2, '0')}</span>
+        <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--tk-muted)]">Read · {String(index + 1).padStart(2, '0')}</span>
         <h2 className="editable-display mt-1.5 text-lg font-semibold leading-snug tracking-[-0.02em]">{post.title}</h2>
         <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--tk-muted)]">{getSummary(post)}</p>
         {website ? <p className="mt-3 truncate text-xs font-medium text-[var(--tk-accent)]">{cleanDomain(website)}</p> : null}
@@ -351,3 +386,5 @@ function ProfileArchiveCard({ post, href }: { post: SitePost; href: string }) {
     </Link>
   )
 }
+
+
