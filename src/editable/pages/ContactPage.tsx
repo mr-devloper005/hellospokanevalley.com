@@ -6,14 +6,7 @@ import { getFactoryState } from '@/design/factory/get-factory-state'
 import { getProductKind } from '@/design/factory/get-product-kind'
 import { EditableContactLeadForm } from '@/editable/components/EditableContactLeadForm'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
-
-const tone = {
-  shell: 'bg-[var(--slot4-page-bg)] text-[var(--slot4-page-text)]',
-  panel: 'border border-[var(--editable-border)] bg-[var(--slot4-surface-bg)]',
-  soft: 'border border-[var(--editable-border)] bg-[var(--slot4-panel-bg)]',
-  muted: 'text-[var(--slot4-muted-text)]',
-  action: 'bg-[var(--slot4-accent-fill)] text-[var(--slot4-on-accent)] hover:opacity-90',
-}
+import { editableDesignContract as dc } from '@/editable/layouts/design-contract'
 
 function getLanes(kind: ReturnType<typeof getProductKind>) {
   if (kind === 'directory') {
@@ -50,27 +43,49 @@ export default function ContactPage() {
   const lanes = getLanes(productKind)
 
   return (
-    <EditableSiteShell className={tone.shell}>
-      <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <section className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--slot4-accent)]">{pagesContent.contact.eyebrow}</p>
-            <h1 className="editable-display mt-4 text-5xl font-semibold tracking-[-0.02em]">{pagesContent.contact.title}</h1>
-            <p className={`mt-5 max-w-2xl text-sm leading-8 ${tone.muted}`}>{pagesContent.contact.description}</p>
-            <div className="mt-8 space-y-4">
+    <EditableSiteShell>
+      <main className="relative">
+        <section className={`${dc.shell.section} pt-32 pb-14 sm:pt-40 lg:pt-44`}>
+          <div className="mx-auto max-w-4xl text-center">
+            <span className={dc.badge.pill}>{pagesContent.contact.eyebrow}</span>
+            <h1 className={`${dc.type.heroTitle} mt-8`}>
+              {pagesContent.contact.title.split(' ').slice(0, -1).join(' ')}{' '}
+              <span className="editable-accent italic">
+                <span className="editable-highlight">{pagesContent.contact.title.split(' ').slice(-1)}</span>
+              </span>
+            </h1>
+            <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-[var(--slot4-muted-text)]">
+              {pagesContent.contact.description}
+            </p>
+          </div>
+        </section>
+
+        <section className={`${dc.shell.section} pb-24`}>
+          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <div className="grid gap-4">
               {lanes.map((lane) => (
-                <div key={lane.title} className={`rounded-sm p-5 ${tone.soft}`}>
-                  <lane.icon className="h-5 w-5 text-[var(--slot4-accent)]" />
-                  <h2 className="editable-display mt-3 text-xl font-semibold">{lane.title}</h2>
-                  <p className={`mt-2 text-sm leading-7 ${tone.muted}`}>{lane.body}</p>
+                <div
+                  key={lane.title}
+                  className="group rounded-[24px] border border-[var(--editable-border)] bg-[var(--slot4-panel-bg)] p-7 transition duration-500 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(26,22,20,0.08)]"
+                >
+                  <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--slot4-page-text)] text-[var(--slot4-page-bg)]">
+                    <lane.icon className="h-5 w-5" />
+                  </span>
+                  <h2 className="editable-display mt-5 text-2xl leading-tight">{lane.title}</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--slot4-muted-text)]">{lane.body}</p>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className={`rounded-sm p-7 ${tone.panel}`}>
-            <h2 className="editable-display text-2xl font-semibold">{pagesContent.contact.formTitle}</h2>
-            <EditableContactLeadForm />
+            <div className="editable-card-glow rounded-[28px] border border-[var(--editable-border)] p-8 sm:p-10">
+              <span className={dc.badge.pill}>Send a message</span>
+              <h2 className="editable-display mt-5 text-3xl leading-tight sm:text-4xl">
+                {pagesContent.contact.formTitle}
+              </h2>
+              <div className="mt-6">
+                <EditableContactLeadForm />
+              </div>
+            </div>
           </div>
         </section>
       </main>
